@@ -2,40 +2,41 @@
 	"name": "Microsoft Teams Notifications",
 	"version": "0.01",
 	"author": "Greg Swallow",
-	"url": "https://github.com/kulttuuri/slack_mediawiki",
+	"url": "https://github.com/gswallow/MSTeamsNotifications",
 	"description": "Sends Teams notifications for selected actions that have occurred in your MediaWiki sites.",
 	"type": "other",
 	"AutoloadClasses": {
-		"TeamsNotifications": "TeamsNotificationsCore.php"
+		"MSTeamsNotifications": "MSTeamsNotificationsCore.php"
 	},
 	"Hooks": {
 		"PageContentSaveComplete": [
 			[
-				"TeamsNotifications::teams_article_saved"
+				"MSTeamsNotifications::teams_article_saved"
 			]
 		],
 		"PageContentInsertComplete": [
 			[
-				"TeamsNotifications::teams_article_inserted"
+				"MSTeamsNotifications::teams_article_inserted"
 			]
 		],
 		"ArticleDeleteComplete": [
 			[
-				"TeamsNotifications::teams_article_deleted"
+				"MSTeamsNotifications::teams_article_deleted"
 			]
 		],
 		"TitleMoveComplete": [
 			[
-				"TeamsNotifications::teams_article_moved"
+				"MSTeamsNotifications::teams_article_moved"
 			]
 		],
 		"AddNewAccount": [
 			[
-				"TeamsNotifications::teams_new_user_account"
+				"MSTeamsNotifications::teams_new_user_account"
 			]
 		]
 	},
 	"config": {
+    "TeamsTimeZone": "UTC",
 		"TeamsIncomingWebhookUrl": "",
 		"TeamsFromName": "",
 		"TeamsSendMethod": "curl",
@@ -46,13 +47,10 @@
 		"WikiUrl": "",
 		"WikiUrlEnding": "index.php?title=",
 		"WikiUrlEndingUserRights": "Special%3AUserRights&user=",
-		"WikiUrlEndingBlockUser": "Special:Block/",
 		"WikiUrlEndingUserPage": "User:",
 		"WikiUrlEndingUserTalkPage": "User_talk:",
 		"WikiUrlEndingUserContributions": "Special:Contributions/",
-		"WikiUrlEndingBlockList": "Special:BlockList",
 		"WikiUrlEndingEditArticle": "action=edit",
-		"WikiUrlEndingDeleteArticle": "action=delete",
 		"WikiUrlEndingHistory": "action=history",
 		"WikiUrlEndingDiff": "diff=prev&oldid=",
 		"TeamsNotificationNewUser": true,
@@ -60,8 +58,6 @@
 		"TeamsNotificationRemovedArticle": true,
 		"TeamsNotificationMovedArticle": true,
 		"TeamsNotificationEditedArticle": true,
-		"TeamsNotificationFileUpload": true,
-		"TeamsIncludeDiffSize": true,
 		"TeamsShowNewUserEmail": true,
 		"TeamsShowNewUserFullName": true,
 		"TeamsShowNewUserIP": true

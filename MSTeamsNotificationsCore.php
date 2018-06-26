@@ -1,17 +1,20 @@
 <?php
-class TeamsNotifications
+class MSTeamsNotifications
 {
 
   /**
    * Creates the container for an actionable message card.
    */
-  static function createMessageCard($title, $author, $action, $details, $editTarget = NULL, $talkTarget = NULL) 
+  static function createMessageCard($title, $author, $action, $details, $pageTarget = NULL, $editTarget = NULL, $talkTarget = NULL) 
   {
-    date_default_timezone_set('US/Eastern'); // Make this a variable.
+
+    global $wgTeamsTimeZone, $wgWikiLogoUrl;
+
+    date_default_timezone_set($wgTeamsTimeZone);
     $timestamp = strftime('%Y-%m-%d %H:%M:%S');
 
     $activity = array(
-      "activityImage" => "https://s3.us-east-2.amazonaws.com/ivytech-it/IVY_VT_2CW.jpg", // Make this a variable.
+      "activityImage" =>  $wgWikiLogoUrl,
       "activityTitle" => $title,
       "activitySubTitle" => $timestamp,
       "activityText" => "$author $action $details"
@@ -26,6 +29,10 @@ class TeamsNotifications
     );
 
     $actions = array();
+
+    if (!$pageTarget == NULL) {
+      array_unshift($actions, array("@type" => "OpenUri", "name" => "View in Browser", "targets" => array( array( "os" => "default", "uri" => $pageTarget))));
+    }
 
     if (!$talkTarget == NULL) {
       array_unshift($actions, array( "@type" => "OpenUri", "name" => "Discuss on wiki", "targets" => array( array( "os" => "default", "uri" => $talkTarget))));
@@ -63,22 +70,16 @@ class TeamsNotifications
   static function getTeamsArticleText(WikiPage $article, $diff = false)
   {
     global $wgWikiUrl, $wgWikiUrlEnding, $wgWikiUrlEndingEditArticle,
-      $wgWikiUrlEndingDeleteArticle, $wgWikiUrlEndingHistory,
-      $wgWikiUrlEndingDiff, $wgTeamsIncludePageUrls;
+      $wgWikiUrlEndingHistory, $wgWikiUrlEndingDiff;
 
     $prefix = $wgWikiUrl.$wgWikiUrlEnding.str_replace(" ", "_", $article->getTitle()->getFullText());
 
     # return an array
-    if ($wgTeamsIncludePageUrls) {
-      $result = array("articlePage" => $prefix,
-                       "articleEditPage" => sprintf("%s&%s", $prefix, $wgWikiUrlEndingEditArticle),
-                       "articleDeletePage" => sprintf("%s&%s", $prefix, $wgWikiUrlEndingDeleteArticle),
-                       "articleHistoryPage" => sprintf("%s&%s", $prefix, $wgWikiUrlEndingHistory));
-      if ($diff) {
-        $result["articleDiffPage"] = sprintf("%s&%s", $prefix, $wgWikiUrlEndingDiff.$article->getRevision()->getID());
-      }
-    } else {
-      $result = array("articlePage" => sprintf("%s%s", $prefix, $article->getTitle()->getFullText())); 
+    $result = array("articlePage" => $prefix,
+                    "articleEditPage" => sprintf("%s&%s", $prefix, $wgWikiUrlEndingEditArticle),
+                    "articleHistoryPage" => sprintf("%s&%s", $prefix, $wgWikiUrlEndingHistory));
+    if ($diff) {
+      $result["articleDiffPage"] = sprintf("%s&%s", $prefix, $wgWikiUrlEndingDiff.$article->getRevision()->getID());
     }
 
     return $result;
@@ -90,20 +91,13 @@ class TeamsNotifications
    */
   static function getTeamsTitleText(Title $title)
   {
-    global $wgWikiUrl, $wgWikiUrlEnding, $wgWikiUrlEndingEditArticle,
-      $wgWikiUrlEndingDeleteArticle, $wgWikiUrlEndingHistory,
-      $wgSlackIncludePageUrls;
+    global $wgWikiUrl, $wgWikiUrlEnding, $wgWikiUrlEndingEditArticle, $wgWikiUrlEndingHistory;
 
     $titleName = $title->getFullText();
 
-    if ($wgSlackIncludePageUrls) {
-      $result = array("articlePage" => sprintf("%s%s%s", $wgWikiUrl, $wgWikiUrlEnding, $titleName),
-                      "articleEditPage" => sprintf("%s%s%s&%s", $wgWikiUrl, $wgWikiUrlEnding, $titleName, $wgWikUrlEndingEditArticle),
-                      "articleDeletePage" => sprintf("%s%s%s&%s", $wgWikiUrl, $wgWikiUrlEnding, $titleName, $wgWikUrlEndingDeleteArticle),
-                      "articleHistoryPage" => sprintf("%s%s%s&%s", $wgWikiUrl, $wgWikiUrlEnding, $titleName, $wgWikUrlEndingHistory));
-    } else {
-      $result = array("articlePage" => sprintf("%s%s%s", $wgWikiUrl, $wgWikiUrlEnding, $titleName));
-    }
+    $result = array("articlePage" => sprintf("%s%s%s", $wgWikiUrl, $wgWikiUrlEnding, $titleName),
+                    "articleEditPage" => sprintf("%s%s%s&%s", $wgWikiUrl, $wgWikiUrlEnding, $titleName, $wgWikiUrlEndingEditArticle),
+                    "articleHistoryPage" => sprintf("%s%s%s&%s", $wgWikiUrl, $wgWikiUrlEnding, $titleName, $wgWikiUrlEndingHistory));
 
     return $result;
   }
@@ -115,7 +109,7 @@ class TeamsNotifications
   static function teams_article_saved(WikiPage $article, $user, $content, $summary, $isMinor, $isWatch, $section, $flags, $revision, $status, $baseRevId)
   {
     global $wgTeamsNotificationEditedArticle;
-    global $wgTeamsIgnoreMinorEdits, $wgTeamsIncludeDiffSize;
+    global $wgTeamsIgnoreMinorEdits;
     if (!$wgTeamsNotificationEditedArticle) return;
 
     // Discard notifications from excluded pages
@@ -150,10 +144,11 @@ class TeamsNotifications
       $action = "edited";
     }
 
-    $details = sprintf("[%s](%s)", $article->getTitle(), self::getTeamsArticleText($article, true)["articlePage"]);
+    $details = $article->getTitle();
+    $pageTarget = self::getTeamsArticleText($article, true)["articlePage"];
     $editTarget = self::getTeamsArticleText($article, true)["articleEditPage"];
     $talkTarget = self::getTeamsUserText($user, true)["userTalkPage"];
-    $card = self::createMessageCard($title, $author, $action, $details, $editTarget, $talkTarget);
+    $card = self::createMessageCard($title, $author, $action, $details, $pageTarget, $editTarget, $talkTarget);
 
     self::push_teams_notify($card);
     return true;
@@ -165,7 +160,7 @@ class TeamsNotifications
    */
   static function teams_article_inserted(WikiPage $article, $user, $text, $summary, $isminor, $iswatch, $section, $flags, $revision)
   {
-    global $wgTeamsNotificationAddedArticle, $wgTeamsIncludeDiffSize;
+    global $wgTeamsNotificationAddedArticle;
     if (!$wgTeamsNotificationAddedArticle) return;
 
     // Discard notifications from excluded pages
@@ -181,11 +176,12 @@ class TeamsNotifications
     
     $author = sprintf("[%s](%s)", $user, self::getTeamsUserText($user)["userInfoPage"]);
     $title = "Page Created";
-    $details = sprintf("[%s](%s)", $article->getTitle(), self::getTeamsArticleText($article, true)["articlePage"]);
     $action = "created";
+    $details = $article->getTitle();
+    $pageTarget = self::getTeamsArticleText($article, true)["articlePage"];
     $editTarget = self::getTeamsArticleText($article, true)["articleEditPage"];
     $talkTarget = self::getTeamsUserText($user, true)["userTalkPage"];
-    $card = self::createMessageCard($title, $author, $action, $details, $editTarget, $talkTarget);
+    $card = self::createMessageCard($title, $author, $action, $details, $pageTarget, $editTarget, $talkTarget);
 
     self::push_teams_notify($card);
     return true;
@@ -210,10 +206,10 @@ class TeamsNotifications
 
     $author = sprintf("[%s](%s)", $user, self::getTeamsUserText($user)["userInfoPage"]);
     $title = "Page Deleted";
-    $details = sprintf("[%s](%s)", $article->getTitle(), self::getTeamsArticleText($article, true)["articlePage"]);
     $action = "deleted";
+    $details = $article->getTitle();
     $talkTarget = self::getTeamsUserText($user, true)["userTalkPage"];
-    $card = self::createMessageCard($title, $author, $action, $details, "", $talkTarget);
+    $card = self::createMessageCard($title, $author, $action, $details, NULL, NULL, $talkTarget);
 
     self::push_teams_notify($card);
     return true;
@@ -238,10 +234,13 @@ class TeamsNotifications
     }
 
     $author = sprintf("[%s](%s)", $user, self::getTeamsUserText($user)["userInfoPage"]);
-    $title = "Page Deleted";
-    $details = sprintf("moved %s to [%s](%s)", $title, $newtitle, self::getTeamsTitleText($newtitle)["articlePage"]);
+    $title = "Page Moved";
     $action = "";
-    $card = self::createMessageCard($title, $author, $action, $details);
+    $details = sprintf("moved %s to %s", $title, $newtitle);
+    $pageTarget = self::getTeamsTitleText($newtitle)["articlePage"];
+    $editTarget = self::getTeamsTitleText($newtitle)["articleEditPage"];
+
+    $card = self::createMessageCard($title, $author, $action, $details, $pageTarget, $editTarget, NULL);
 
     self::push_teams_notify($card);
     return true;
@@ -281,7 +280,7 @@ class TeamsNotifications
     $title = "User Account Created";
     $details = $message;
     $action = "";
-    $card = self::createMessageCard($title, $author, $action, $details);
+    $card = self::createMessageCard($title, $author, $action, $details, NULL, NULL, NULL);
 
     self::push_teams_notify($card);
     return true;
