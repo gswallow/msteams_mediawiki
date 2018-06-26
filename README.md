@@ -4,13 +4,16 @@ This is a extension for [MediaWiki](https://www.mediawiki.org/wiki/MediaWiki)
 that sends notifications of actions in your Wiki like editing, adding or
 removing a page into a Microsoft Teams Channel.  I borrowed the majority of
 this from the [Slack](https://github.com/kulttuuri/slack_mediawiki) extension.
-Thanks, @kulttuuri!
+Thanks, [@kulttuuri](https://github.com/kulttuuri/)!
 
 There are also extensions that can send notifications to 
 [HipChat](https://github.com/kulttuuri/hipchat_mediawiki) 
 or [Discord](https://github.com/kulttuuri/discord_mediawiki).
 
-Microsoft Teams uses "actionable message cards" for 
+Microsoft Teams accepts ["actionable message cards"](https://docs.microsoft.com/en-us/outlook/actionable-messages/message-card-reference),
+which are basically JSON encoded documents with markdown-formatted text in
+each element.
+
 ![Screenshot](docs/teamsnotifications.png)
 
 ## Supported MediaWiki operations to send notifications
